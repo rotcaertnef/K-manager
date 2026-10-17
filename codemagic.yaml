@@ -6,6 +6,13 @@ workflows:
     environment:
       flutter: stable
       java: 17
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
     scripts:
       - name: Check the sources are in the repo
         script: |
