@@ -1,1 +1,60 @@
+name: Unzip and Commit Folder
 
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  unzip-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip folder
+        run: |
+          if [ -f "mt_micro.zip" ]; then
+            unzip -o flashlight-strobe-github.zip -d ./
+            echo "Successfully unzipped folder."
+          else
+            echo "Error: mt_micro.zip not found!"
+            exit 1
+          fi
+
+      - name: Patch workspace config for Android CI
+        run: |
+          cd flashlight-strobe-github
+
+          # Fix 1: pnpm-workspace.yaml lists artifacts/* but app is at flashlight-strobe/
+          sed -i 's|  - artifacts/\*|  - flashlight-strobe|' pnpm-workspace.yaml
+          sed -i '/^  - lib\/\*/d' pnpm-workspace.yaml
+          sed -i '/^  - lib\/integrations\/\*/d' pnpm-workspace.yaml
+          sed -i '/^  - scripts/d' pnpm-workspace.yaml
+          echo "Patched pnpm-workspace.yaml packages:"
+          grep -A4 "^packages:" pnpm-workspace.yaml
+
+          # Fix 2: @workspace/api-client-react does not exist in this repo
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('flashlight-strobe/package.json', 'utf8'));
+            const had = '@workspace/api-client-react' in (pkg.devDependencies || {});
+            delete (pkg.devDependencies || {})['@workspace/api-client-react'];
+            fs.writeFileSync('flashlight-strobe/package.json', JSON.stringify(pkg, null, 2) + '\n');
+            console.log(had ? 'Removed @workspace/api-client-react' : 'Key not present, nothing to do');
+          "
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "Automated unzip + patch of flashlight-strobe-github.zip"
+            git push
+          fi
