@@ -1,0 +1,46 @@
+workflows:
+  mt-micro-apk:
+    name: MT Micro APK
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Check the sources are in the repo
+        script: |
+          for f in main.dart unzipper.dart pubspec.yaml; do
+            [ -f "$f" ] || { echo "$f is missing - has the 'Unzip and Commit' GitHub Action finished yet?"; exit 1; }
+          done
+      - name: Create Android project around main.dart
+        script: |
+          mkdir -p lib
+          cp pubspec.yaml /tmp/pubspec.yaml
+          cp main.dart /tmp/main.dart
+          cp unzipper.dart /tmp/unzipper.dart
+          flutter create --platforms=android --org com.mtmicro --project-name mtmicro .
+          cp /tmp/pubspec.yaml pubspec.yaml
+          cp /tmp/main.dart lib/main.dart
+          cp /tmp/unzipper.dart lib/unzipper.dart
+      - name: Patch AndroidManifest (permissions, cleartext for the local HTML server, app name)
+        script: |
+          python3 - <<'PY'
+          import re
+          f = 'android/app/src/main/AndroidManifest.xml'
+          s = open(f).read()
+          perms = ('<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>\n'
+                   '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n'
+                   '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n'
+                   '    <uses-permission android:name="android.permission.INTERNET"/>\n    ')
+          s = s.replace('<application', perms + '<application', 1)
+          s = s.replace('<application', '<application android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true"', 1)
+          s = re.sub(r'android:label="[^"]*"', 'android:label="MT Micro"', s, count=1)
+          open(f, 'w').write(s)
+          PY
+          cat android/app/src/main/AndroidManifest.xml
+      - name: Get packages
+        script: flutter pub get
+      - name: Build APK (arm64, fits the Galaxy A17)
+        script: flutter build apk --release --target-platform android-arm64
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk

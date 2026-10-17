@@ -1,0 +1,15 @@
+name: mtmicro
+description: Micro file manager (MT Manager style) - listing, editing, image viewer, HTML viewer.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  archive: ^3.6.1
+  path: ^1.9.0
+  permission_handler: ^11.3.1
+  webview_flutter: ^4.10.0
+flutter:
+  uses-material-design: true
