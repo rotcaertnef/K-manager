@@ -1,0 +1,44 @@
+name: Unzip and Commit
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "*.zip" ]      # only runs when a zip is in the main dir
+  workflow_dispatch:         # also lets you press "Run workflow" by hand
+
+jobs:
+  unzip-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unzip every zip in the main dir
+        run: |
+          shopt -s nullglob
+          zips=(*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then
+            echo "No zip files in the main dir - nothing to do."
+            exit 0
+          fi
+          for z in "${zips[@]}"; do
+            echo "Unzipping $z"
+            unzip -o "$z" -d ./
+            rm -f "$z"       # remove the zip so it is not unpacked again
+          done
+          ls -la
+
+      - name: Commit and Push Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Automated unzip of uploaded zip"
+            git push
+          fi
