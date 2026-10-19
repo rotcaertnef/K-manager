@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'terminal.dart';
 import 'unzipper.dart';
 
 const rootPath = '/storage/emulated/0';
@@ -341,6 +342,12 @@ class _BrowserState extends State<Browser> {
                   title: Text(e.key),
                   onTap: () { Navigator.pop(context); go(Directory(e.value)); },
                 ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.terminal),
+                title: const Text('Terminal (Python / HTML / React)'),
+                onTap: () { Navigator.pop(context); Navigator.push(context, MaterialPageRoute(builder: (_) => const TerminalPage())); },
+              ),
             ]),
           ),
         ),
@@ -488,6 +495,8 @@ class _EditorState extends State<Editor> {
   String? err;
   double fs = 13;
   bool get isHtml => htmlExt.contains(p.extension(widget.path).toLowerCase());
+  bool get isPy => p.extension(widget.path).toLowerCase() == '.py';
+  bool get isJsx => ['.jsx', '.tsx'].contains(p.extension(widget.path).toLowerCase());
 
   @override
   void initState() { super.initState(); load(); }
@@ -534,6 +543,15 @@ class _EditorState extends State<Editor> {
                   onPressed: () async {
                     if (dirty) await save();
                     if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => HtmlViewer(path: widget.path)));
+                  },
+                ),
+              if (isPy || isJsx)
+                IconButton(
+                  icon: const Icon(Icons.terminal),
+                  tooltip: 'Run in terminal',
+                  onPressed: () async {
+                    if (dirty) await save();
+                    if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => TerminalPage(code: c.text, mode: isPy ? 'py' : 'jsx')));
                   },
                 ),
               IconButton(icon: const Icon(Icons.save), onPressed: err == null ? save : null),

@@ -15,19 +15,17 @@ workflows:
     scripts:
       - name: Check the sources are in the repo
         script: |
-          for f in main.dart unzipper.dart pubspec.yaml; do
+          for f in main.dart unzipper.dart terminal.dart pubspec.yaml; do
             [ -f "$f" ] || { echo "$f is missing - has the 'Unzip and Commit' GitHub Action finished yet?"; exit 1; }
           done
       - name: Create Android project around main.dart
         script: |
-          mkdir -p lib
+          mkdir -p lib /tmp/kdart
           cp pubspec.yaml /tmp/pubspec.yaml
-          cp main.dart /tmp/main.dart
-          cp unzipper.dart /tmp/unzipper.dart
+          cp *.dart /tmp/kdart/
           flutter create --platforms=android --org com.mtmicro --project-name mtmicro .
           cp /tmp/pubspec.yaml pubspec.yaml
-          cp /tmp/main.dart lib/main.dart
-          cp /tmp/unzipper.dart lib/unzipper.dart
+          cp /tmp/kdart/*.dart lib/
       - name: Patch AndroidManifest (permissions, cleartext for the local HTML server, app name)
         script: |
           python3 - <<'PY'
